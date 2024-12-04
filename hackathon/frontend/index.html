@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassifyAI</title>
+</head>
+
+<body>
+    <h1>ClassifyAI: Intelligent Document Classifier</h1>
+    <form id="uploadForm">
+        <input type="file" name="file" id="fileInput" required>
+        <button type="submit">Upload PDF</button>
+    </form>
+    <div id="results"></div>
+
+    <script>
+        const form = document.getElementById("uploadForm").addEventListener("submit", async (e) => {
+            
+                e.preventDefault();
+               
+                const fileInput = document.getElementById("fileInput");
+                if (!fileInput.files.length) {
+                    alert("Please select a file before uploading.");
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append("file", fileInput.files[0]);
+
+                try {
+                    const response = await fetch('http://127.0.0.1:5000/classify', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    const result = await response.json();
+                    if (response.ok) {
+                        document.getElementById("result").innerHTML = `
+                <p>Category: ${result.category}</p>
+                <p>Confidence: ${result.confidence}%</p>
+            `;
+                    } else {
+                        alert(`Error: ${result.error}`);
+                    }
+                } catch (error) {
+                    alert(`Failed to upload file: ${error.message}`);
+                }
+            });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('file', document.getElementById('fileInput').files[0]);
+
+            const response = await fetch('http://127.0.0.1:5000/classify', {
+                method: 'POST',
+                body: formData
+            });
+
+
+            const data = await response.json();
+            document.getElementById('results').innerText =
+                `Category: ${data.category}, Confidence: ${data.confidence.toFixed(2)}%`;
+        });
+    </script>
+</body>
+
+</html>
