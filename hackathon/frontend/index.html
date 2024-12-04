@@ -17,10 +17,11 @@
 
     <script>
         const form = document.getElementById("uploadForm").addEventListener("submit", async (e) => {
-            
+           
                 e.preventDefault();
                
-                const fileInput = document.getElementById("fileInput");
+                const fileInput = document.getElementById("fileInput"); 
+                
                 if (!fileInput.files.length) {
                     alert("Please select a file before uploading.");
                     return;
@@ -28,16 +29,16 @@
 
                 const formData = new FormData();
                 formData.append("file", fileInput.files[0]);
+                
 
                 try {
-                    const response = await fetch('http://127.0.0.1:5000/classify', {
+                    const response = await fetch('http://127.0.0.1:5000/upload', {
                         method: 'POST',
                         body: formData,
                     });
-
                     const result = await response.json();
                     if (response.ok) {
-                        document.getElementById("result").innerHTML = `
+                        document.getElementById("results").innerHTML = `
                 <p>Category: ${result.category}</p>
                 <p>Confidence: ${result.confidence}%</p>
             `;

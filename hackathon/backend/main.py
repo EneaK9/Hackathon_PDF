@@ -53,11 +53,6 @@ def upload_file():
         logger.error(f"Error processing upload: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-    return response
 
 if __name__ == '__main__':
     logger.info("Starting server...")
