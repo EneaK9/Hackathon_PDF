@@ -1,139 +1,190 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>PDF Document Classifier</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassifyAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
-         .loader-container {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.8);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
+        .loaders {
+        width: 35px;
+        aspect-ratio: 1;
+        --_g: no-repeat radial-gradient(farthest-side,#ffffff 94%,#ffffff00);
+        background:
+            var(--_g) 0    0,
+            var(--_g) 100% 0,
+            var(--_g) 100% 100%,
+            var(--_g) 0    100%;
+        background-size: 40% 40%;
+        animation: l38 .5s infinite; 
         }
-
-        .spinner {
-            width: 70px;
-            height: 70px;
-            border: 8px solid #f3f3f3;
-            border-radius: 50%;
-            border-top: 8px solid #3498db;
-            animation: spin 1s linear infinite;
-        }
-
-        .loading-text {
-            margin-top: 20px;
-            font-size: 18px;
-            color: #333;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .upload-container {
-            text-align: center;
-            padding: 20px;
-        }
-
-        .result {
-            margin: 20px;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            display: none;
-        }
-
-        .confidence-bar {
-            background-color: #f0f0f0;
-            border-radius: 5px;
-            height: 20px;
-            margin-top: 10px;
-        }
-
-        .confidence-level {
-            background-color: #3498db;
-            height: 100%;
-            border-radius: 5px;
-            width: 0%;
-            transition: width 0.5s ease-in-out;
+        @keyframes l38 {
+        100% {background-position: 100% 0,100% 100%,0 100%,0 0}
         }
     </style>
-</head>
+    </head>
 
-<body>
-    <h1>PDF Document Classifier</h1>
-<div class="loader-container" id="loader">
-    <div class="spinner"></div>
-    <div class="loading-text">Analyzing PDF...</div>
-</div>
-    <div class="upload-container">
-        <input type="file" id="pdfFile" accept=".pdf">
-        <button onclick="uploadPDF()">Upload and Classify</button>
+<body class="bg-gradient-to-r from-gray-900 to-black min-h-screen flex items-center justify-center">
+    <div class="bg-gray-800 shadow-2xl my-10 rounded-3xl w-4/5 max-w-3xl border border-gray-700">
+        <div class="bg-gradient-to-r from-gray-800 to-gray-900 text-center p-10 rounded-t-3xl">
+            <img src="img/logo.png" alt="ClassifyAI Logo" class="h-16 mx-auto filter grayscale hover:filter-none transition duration-300">
+            <h1 class="text-white text-3xl font-extrabold mt-4">ClassifyAI</h1>
+            <p class="text-gray-400 mt-2">PDF Classification System</p>
+        </div>
+
+        <div class="p-10 text-center bg-gradient-to-r from-gray-800 to-gray-700 rounded-xl shadow-inner">
+            <h2 class="text-gray-200 text-2xl font-semibold">Upload Your PDF</h2>
+            <p class="text-gray-400 mt-2">Drop your PDF file below or click to upload.</p>
+            <div class="mt-8">
+                <input type="file" id="pdfFile"  accept=".pdf" class="hidden" onchange="handleFileUpload()">
+                <label for="pdfFile" id="uploadLabel"
+                    class="cursor-pointer border-2 border-dashed border-gray-600 bg-gray-800 p-10 rounded-lg block hover:bg-gray-700 hover:border-gray-500 hover:shadow-lg transition duration-300">
+                    <p id="uploadPrompt" class="text-gray-300 font-medium">Click or Drag & Drop your PDF here</p>
+                </label>
+                <div id="fileInfo" class="mt-4 items-center justify-center space-x-4 hidden">
+                    <canvas id="pdfPreview" class="w-20 h-22 rounded shadow-lg bg-gray-700"></canvas>
+                    <span id="fileName" class="text-gray-300 font-medium"></span>
+                    <button id="deleteFile" onclick="removeFile()"
+                        class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded transition duration-300">
+                        Delete
+                    </button>
+                </div>
+                <button onclick="uploadPDF()" id="uploadButton"
+                    class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-300">
+                    Upload and Classify
+                </button>
+                <div id="notification-message" class="hidden text-center bg-yellow-500 text-black px-4 py-2 rounded-lg shadow-md mt-4">
+                    Please select a PDF file before classifying.
+                </div>
+            </div>
+        </div>
+        <div id="classification-results">
+            <div id="result"
+            class="bg-gradient-to-r from-gray-900 to-gray-800 p-10 rounded-b-3xl text-center border-t border-gray-700 text-gray-300"
+            style="display: none;">
+            <h2 class="text-xl font-bold text-white">Classification Results</h2>
+            <div class="mt-4">
+                <p id="category" class="text-lg">
+                    <span class="font-bold text-gray-100"></span> 
+                    <span class="text-gray-400"></span>
+                </p>
+                <p id="confidence" class="text-lg mt-2">
+                    <span class="font-bold text-gray-100"></span>
+                </p>
+                <div class="confidence-bar bg-gray-700 rounded-full h-4 w-full mt-4">
+                    <div id="confidenceBar" class="bg-blue-600 h-full rounded-full" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div></div>
+        
     </div>
 
-    <div id="result" class="result">
-        <h2>Classification Result:</h2>
-        <p>Category: <span id="category"></span></p>
-        <p>Confidence: <span id="confidence"></span>%</p>
-        <div class="confidence-bar">
-            <div id="confidenceBar" class="confidence-level"></div>
+    <div id="loader"
+        class="fixed top-0 left-0 w-full flex h-full bg-black bg-opacity-75 items-center justify-center hidden">
+        <div class="flex flex-col items-center">
+            <div class="flex space-x-4">
+                <div class="loaders">
+                </div>
+            </div>
+            <p id="loadingText" class="text-white mt-4 text-lg">Analyzing PDF...</p>
         </div>
     </div>
 
     <script>
-         function showLoader() {
-                document.getElementById('loader').style.display = 'flex';
+        let funnyTextTimeout;
+        let selectedFile = null;
+        let classificationResults = document.getElementById('result');
+
+        function showLoader() {
+            const loader = document.getElementById('loader');
+            const loadingText = document.getElementById('loadingText');
+            loader.style.display = 'flex';
+
+            funnyTextTimeout = setTimeout(() => {
+                loadingText.textContent = "We're almost there, champ!";
+            }, 6000);
+            funnyTextTimeout = setTimeout(() => {
+                loadingText.textContent = "Wait a little longer...";
+            }, 16000);
+        }
+
+        function hideLoader() {
+            document.getElementById('loader').style.display = 'none';
+
+            clearTimeout(funnyTextTimeout);
+        }
+
+        async function handleFileUpload() {
+            const fileInput = document.getElementById('pdfFile');
+            selectedFile = fileInput.files[0];
+
+            if (selectedFile) {
+                document.getElementById('uploadLabel').style.display = 'none';
+                document.getElementById('fileInfo').style.display = 'flex';
+                document.getElementById('fileName').textContent = selectedFile.name;
+
+                // Use PDF.js to render the first page
+                const pdfUrl = URL.createObjectURL(selectedFile);
+                const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+                const page = await pdf.getPage(1);
+
+                const canvas = document.getElementById('pdfPreview');
+                const context = canvas.getContext('2d');
+                const viewport = page.getViewport({ scale: 0.5 });
+
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+
+                page.render({ canvasContext: context, viewport }).promise;
             }
+        }
 
-            function hideLoader() {
-                document.getElementById('loader').style.display = 'none';
+        function removeFile() {
+            selectedFile = null;
+            document.getElementById('pdfFile').value = "";
+            document.getElementById('uploadLabel').style.display = 'block';
+            document.getElementById('fileInfo').style.display = 'none';
+            classificationResults.style.display = 'none'
+        }
+       
+
+        function uploadPDF() {
+            if (!selectedFile) {
+                alert('Please select a PDF file before classifying.');
+                return;
             }
+            showLoader();
 
-            function uploadPDF() {
-                const fileInput = document.getElementById('pdfFile');
-                const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', selectedFile);
 
-                if (!file) {
-                    alert('Please select a PDF file first.');
-                    return;
-                }
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                        hideLoader();
+                        return;
+                    }
 
-                showLoader();
-                const formData = new FormData();
-                formData.append('file', file);
+                    document.getElementById('result').style.display = 'block';
+                    document.getElementById('category').textContent = 'Category : '+data.category;
+                    document.getElementById('confidence').textContent = 'Confidence : ' + data.confidence + ' %';
+                    document.getElementById('confidenceBar').style.width = data.confidence + '%';
 
-                fetch('/upload', {
-                    method: 'POST',
-                    body: formData
+                    hideLoader();
                 })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.error) {
-                            alert(data.error);
-                            hideLoader();
-                            return;
-                        }
-
-                        document.getElementById('result').style.display = 'block';
-                        document.getElementById('category').textContent = data.category;
-                        document.getElementById('confidence').textContent = data.confidence;
-                        document.getElementById('confidenceBar').style.width = data.confidence + '%';
-                        hideLoader();
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('An error occurred while processing the file.');
-                        hideLoader();
-                    });
-            }
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while processing the file.');
+                    hideLoader();
+                });
+        }
     </script>
 </body>
 
