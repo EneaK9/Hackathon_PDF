@@ -4,15 +4,14 @@ from services.classifier import Classifier
 from flask_cors import CORS 
 import os
 import logging
-app = Flask(__name__)
-processor = Processor()
-classifier = Classifier()
-last_uploaded_file = None
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)
+processor = Processor()
+classifier = Classifier()
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 
 @app.route('/')
 def serve_frontend():
@@ -21,32 +20,31 @@ def serve_frontend():
 @app.route('/upload', methods=['POST'])
 def upload_file():
     try:
-        logger.info("Received upload request")
-        logger.debug(f"Request files: {request.files}")
-        
         if 'file' not in request.files:
-            logger.warning("No file part in request")
             return jsonify({'error': 'No file part'}), 400
             
         file = request.files['file']
-        logger.info(f"Received file: {file.filename}")
         
         if file.filename == '':
-            logger.warning("No selected file")
             return jsonify({'error': 'No selected file'}), 400
             
         if not file.filename.endswith('.pdf'):
-            logger.warning("Invalid file type")
             return jsonify({'error': 'File must be PDF'}), 400
-            
-        content = file.read()
-        logger.info(f"Successfully read file of size: {len(content)} bytes")
+        
+        # Extract text from PDF
+        text = processor.extract_text(file)
+        
+        # Classify the document
+        category, confidence = classifier.classify_document(text)
+        
+        # Get detailed analysis if needed
+        analysis = classifier.get_detailed_analysis(text)
         
         return jsonify({
-            'success': True,
-            'message': 'File received successfully',
-            'filename': file.filename,
-            'size': len(content)
+            'category': category,
+            'confidence': confidence,
+            'analysis': analysis,
+            'filename': file.filename
         })
         
     except Exception as e:

@@ -3,7 +3,7 @@ from io import BytesIO
 
 class Processor:
     def extract_text(self, file_object):
-        print("hellpo")
+       
         try:
             # Save the current position of file pointer
             if hasattr(file_object, 'seek'):

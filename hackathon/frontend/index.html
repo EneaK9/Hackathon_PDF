@@ -1,70 +1,139 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ClassifyAI</title>
+    <title>PDF Document Classifier</title>
+    <style>
+         .loader-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .spinner {
+            width: 70px;
+            height: 70px;
+            border: 8px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 8px solid #3498db;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #333;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .upload-container {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .result {
+            margin: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .confidence-bar {
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            height: 20px;
+            margin-top: 10px;
+        }
+
+        .confidence-level {
+            background-color: #3498db;
+            height: 100%;
+            border-radius: 5px;
+            width: 0%;
+            transition: width 0.5s ease-in-out;
+        }
+    </style>
 </head>
 
 <body>
-    <h1>ClassifyAI: Intelligent Document Classifier</h1>
-    <form id="uploadForm">
-        <input type="file" name="file" id="fileInput" required>
-        <button type="submit">Upload PDF</button>
-    </form>
-    <div id="results"></div>
+    <h1>PDF Document Classifier</h1>
+<div class="loader-container" id="loader">
+    <div class="spinner"></div>
+    <div class="loading-text">Analyzing PDF...</div>
+</div>
+    <div class="upload-container">
+        <input type="file" id="pdfFile" accept=".pdf">
+        <button onclick="uploadPDF()">Upload and Classify</button>
+    </div>
+
+    <div id="result" class="result">
+        <h2>Classification Result:</h2>
+        <p>Category: <span id="category"></span></p>
+        <p>Confidence: <span id="confidence"></span>%</p>
+        <div class="confidence-bar">
+            <div id="confidenceBar" class="confidence-level"></div>
+        </div>
+    </div>
 
     <script>
-        const form = document.getElementById("uploadForm").addEventListener("submit", async (e) => {
-           
-                e.preventDefault();
-               
-                const fileInput = document.getElementById("fileInput"); 
-                
-                if (!fileInput.files.length) {
-                    alert("Please select a file before uploading.");
+         function showLoader() {
+                document.getElementById('loader').style.display = 'flex';
+            }
+
+            function hideLoader() {
+                document.getElementById('loader').style.display = 'none';
+            }
+
+            function uploadPDF() {
+                const fileInput = document.getElementById('pdfFile');
+                const file = fileInput.files[0];
+
+                if (!file) {
+                    alert('Please select a PDF file first.');
                     return;
                 }
 
+                showLoader();
                 const formData = new FormData();
-                formData.append("file", fileInput.files[0]);
-                
+                formData.append('file', file);
 
-                try {
-                    const response = await fetch('http://127.0.0.1:5000/upload', {
-                        method: 'POST',
-                        body: formData,
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert(data.error);
+                            hideLoader();
+                            return;
+                        }
+
+                        document.getElementById('result').style.display = 'block';
+                        document.getElementById('category').textContent = data.category;
+                        document.getElementById('confidence').textContent = data.confidence;
+                        document.getElementById('confidenceBar').style.width = data.confidence + '%';
+                        hideLoader();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while processing the file.');
+                        hideLoader();
                     });
-                    const result = await response.json();
-                    if (response.ok) {
-                        document.getElementById("results").innerHTML = `
-                <p>Category: ${result.category}</p>
-                <p>Confidence: ${result.confidence}%</p>
-            `;
-                    } else {
-                        alert(`Error: ${result.error}`);
-                    }
-                } catch (error) {
-                    alert(`Failed to upload file: ${error.message}`);
-                }
-            });
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData();
-            formData.append('file', document.getElementById('fileInput').files[0]);
-
-            const response = await fetch('http://127.0.0.1:5000/classify', {
-                method: 'POST',
-                body: formData
-            });
-
-
-            const data = await response.json();
-            document.getElementById('results').innerText =
-                `Category: ${data.category}, Confidence: ${data.confidence.toFixed(2)}%`;
-        });
+            }
     </script>
 </body>
 
